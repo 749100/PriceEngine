@@ -90,9 +90,13 @@ export default function PricingDashboard({ currentUser, onLogout }) {
       // Relational ownership pointer
       Product.set("createdBy", activeUser);
 
-      // 🔐 SERVER-SIDE ENFORCED ACL MULTI-TENANCY LOCK
-      // Restricts database-level read/write mutations exclusively to this logged-in user
-      const productAcl = new Parse.ACL(activeUser);
+      // 🔐 EXPLICIT SERVER-SIDE ENFORCED ACL LOCKOUT OVERRIDE
+      // Instantly revokes global public access and explicitly binds read/write to the current session owner
+      const productAcl = new Parse.ACL();
+      productAcl.setPublicReadAccess(false);       // 🚫 Block general public reads
+      productAcl.setPublicWriteAccess(false);      // 🚫 Block general public writes
+      productAcl.setReadAccess(activeUser, true);   // ✅ Allow only this user read access
+      productAcl.setWriteAccess(activeUser, true);  // ✅ Allow only this user write access
       Product.setACL(productAcl);
 
       if (businessType === 'digital') {
