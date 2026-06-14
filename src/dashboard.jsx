@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import Parse from 'parse/dist/parse.min.js';
 
 export default function PricingDashboard({ currentUser, onLogout }) {
-  // 1. Expanded Unified Application State
+  // ==========================================
+  // 1. STATE CONFIGURATION
+  // ==========================================
   const [businessType, setBusinessType] = useState('physical'); // physical, service, digital
   const [productName, setProductName] = useState('My Awesome Product');
   
@@ -12,23 +14,23 @@ export default function PricingDashboard({ currentUser, onLogout }) {
     hourlyRate: 25.00,
     monthlyOverhead: 500,
     estimatedMonthlySales: 50,
-    platformFeePercent: 5 // Default for digital products (Stripe/Gumroad)
+    platformFeePercent: 5 // Applicable for digital products (e.g., Stripe/Gumroad)
   });
 
-  // Macroeconomic Risk Layer State
+  // Macroeconomic Volatility Variables
   const [macroFactors, setMacroFactors] = useState({
-    annualInflationPercent: 3.5,     // Compounding baseline cost increase
+    annualInflationPercent: 3.5,     // Baseline cost inflation offset
     supplyChainRisk: 'stable',       // stable, disrupted, severe
-    tradeWarTariffPercent: 0         // Import/Export regulatory tax protection
+    tradeWarTariffPercent: 0         // Import/Export regulatory surcharges
   });
   
-  const [targetMargin, setTargetMargin] = useState(35); // Percentage (0-99)
+  const [targetMargin, setTargetMargin] = useState(35); // Target gross percentage margin (5-85)
   const [competitorPrice, setCompetitorPrice] = useState(65.00);
 
-  // Portfolio Dashboard View State
+  // User's Secure Database Rows Storage Ledger
   const [savedProducts, setSavedProducts] = useState([]);
 
-  // 2. Calculated Metrics State
+  // Automated Output Metric Engine Outputs
   const [metrics, setMetrics] = useState({
     baseCost: 0,
     suggestedPrice: 0,
@@ -37,7 +39,11 @@ export default function PricingDashboard({ currentUser, onLogout }) {
     marketPosition: 'Competitive'
   });
 
-  // Fetch portfolio tracking rows linked to current user session
+  // ==========================================
+  // 2. PARSE DATA PERSISTENCE LAYER
+  // ==========================================
+
+  // Pull records securely tied to the current logged-in session token
   const fetchUserPortfolio = async () => {
     try {
       const activeUser = Parse.User.current();
@@ -45,60 +51,60 @@ export default function PricingDashboard({ currentUser, onLogout }) {
 
       const query = new Parse.Query("Product");
       
-      // Relational Multi-Tenancy Filter
+      // Relational Ownership Scope Barrier
       query.equalTo("createdBy", activeUser);
-      query.descending("createdAt"); // Show newest snapshots first
+      query.descending("createdAt"); // Always show the most recent configurations first
       
       const results = await query.find();
       setSavedProducts(results);
     } catch (error) {
-      console.error("Failed to compile user portfolio database mapping:", error);
+      console.error("Failed to load user portfolio database mapping:", error);
     }
   };
 
-  // Trigger portfolio fetch on dashboard initialization
+  // Sync historical view rows upon dashboard mounting
   useEffect(() => {
     if (currentUser) {
       fetchUserPortfolio();
     }
   }, [currentUser]);
 
-  // Database Core Save Action (Includes Macro Conditions + Portfolio Sync)
+  // Core Document Serialization + Server-Overriding Lock Execution
   const handleSaveProduct = async () => {
     try {
-      // Authenticated Guard Layer
       const activeUser = Parse.User.current();
       if (!activeUser) {
-        alert('Authentication session missing. Please log in to manage pricing assets.');
+        alert('Authentication session missing. Please log back in.');
         return;
       }
 
       const Product = new Parse.Object("Product");
 
-      // Core Properties
+      // Set Metadata and Baseline Parameters
       Product.set("name", productName);
       Product.set("businessType", businessType);
       Product.set("overhead", costs.monthlyOverhead);
       Product.set("monthlySales", costs.estimatedMonthlySales);
       Product.set("targetMargin", targetMargin);
       
-      // Macro Snapshot Properties
+      // Set Macroeconomic Snapshots
       Product.set("inflationRateSnapshot", macroFactors.annualInflationPercent);
       Product.set("supplyChainRiskTier", macroFactors.supplyChainRisk);
       Product.set("appliedTariffPercent", macroFactors.tradeWarTariffPercent);
       
-      // Relational ownership pointer
+      // Set relational structural pointer
       Product.set("createdBy", activeUser);
 
-      // 🔐 EXPLICIT SERVER-SIDE ENFORCED ACL LOCKOUT OVERRIDE
-      // Instantly revokes global public access and explicitly binds read/write to the current session owner
+      // 🔐 SERVER-OVERRIDING ACL ENFORCEMENT LOCKOUT
+      // Disables fallback options and strictly locks item access to the owning user ID
       const productAcl = new Parse.ACL();
-      productAcl.setPublicReadAccess(false);       // 🚫 Block general public reads
-      productAcl.setPublicWriteAccess(false);      // 🚫 Block general public writes
-      productAcl.setReadAccess(activeUser, true);   // ✅ Allow only this user read access
-      productAcl.setWriteAccess(activeUser, true);  // ✅ Allow only this user write access
+      productAcl.setPublicReadAccess(false);        // 🚫 Completely block general public reads
+      productAcl.setPublicWriteAccess(false);       // 🚫 Completely block general public updates
+      productAcl.setReadAccess(activeUser, true);    // ✅ Allow only this active user session to read
+      productAcl.setWriteAccess(activeUser, true);   // ✅ Allow only this active user session to update
       Product.setACL(productAcl);
 
+      // Class conditional sanitation mapping
       if (businessType === 'digital') {
         Product.set("materials", 0);
         Product.set("hoursSpent", 0);
@@ -112,34 +118,34 @@ export default function PricingDashboard({ currentUser, onLogout }) {
       }
 
       await Product.save();
-      alert('Macro-evaluated asset array successfully saved to secure private cloud container!');
+      alert('Pricing profile securely stored inside your cloud ledger container.');
       
-      // Refresh user view automatically without page reloads
+      // Refresh local snapshot array database
       fetchUserPortfolio();
     } catch (error) {
       console.error('Error saving data to Back4App:', error);
-      alert('Failed to save product details: ' + error.message);
+      alert('Failed to execute save operations: ' + error.message);
     }
   };
 
-  // Structural Database Row Purge
+  // Safe Record Erasure Method
   const handleDeleteProduct = async (productId) => {
-    if (!window.confirm("Are you sure you want to permanently delete this pricing profile from your cloud container?")) return;
+    if (!window.confirm("Are you sure you want to permanently erase this record from the cloud?")) return;
     
     try {
       const query = new Parse.Query("Product");
-      const objectToPurge = await query.get(productId);
-      await objectToPurge.destroy();
+      const targetObj = await query.get(productId);
+      await targetObj.destroy();
       
-      // Update local ledger view state
+      // Refresh list update
       fetchUserPortfolio();
     } catch (error) {
-      console.error("Deletion lifecycle failure:", error);
-      alert("Failed to delete product layout entry: " + error.message);
+      console.error("Deletion cycle failure:", error);
+      alert("Failed to discard profile: " + error.message);
     }
   };
 
-  // Clear inputs helper
+  // Reset inputs helper
   const handleClearGrid = () => {
     setProductName('');
     setCosts({
@@ -159,29 +165,30 @@ export default function PricingDashboard({ currentUser, onLogout }) {
     setCompetitorPrice(0);
   };
 
+  // Structured Corporate CSV Generator Output
   const handleExportCSV = () => {
     const csvRows = [
       ["Macro-Aware PriceEngine Pro - Executive Summary Report"],
       ["Generated On", new Date().toLocaleDateString()],
       [],
-      ["1. Metadata Configuration"],
+      ["1. Configuration Metadata"],
       ["Product Name", productName || "Untitled Product"],
       ["Business Asset Class", businessType.toUpperCase()],
       [],
-      ["2. Microeconomic Cost Inputs"],
-      ["Material Component Cost ($)", businessType === 'digital' ? 0 : costs.materials],
+      ["2. Cost Variables"],
+      ["Material Cost ($)", businessType === 'digital' ? 0 : costs.materials],
       ["Labor Allocated (Hours)", businessType === 'digital' ? 0 : costs.hoursSpent],
       ["Hourly Surcharging Wage ($/hr)", businessType === 'digital' ? 0 : costs.hourlyRate],
       ["Corporate Monthly Overhead ($)", costs.monthlyOverhead],
       ["Target Profit Margin (%)", `${targetMargin}%`],
       ["Competitor Price Anchor ($)", competitorPrice],
       [],
-      ["3. Macroeconomic Volatility Variables"],
+      ["3. Macroeconomic Volatility Risk Parameters"],
       ["Annual Inflation Surge Rate (%)", `${macroFactors.annualInflationPercent}%`],
       ["Geopolitical Risk Matrix Tier", macroFactors.supplyChainRisk.toUpperCase()],
       ["Customs Import Tariff Surtax (%)", `${macroFactors.tradeWarTariffPercent}%`],
       [],
-      ["4. Core Output Projections"],
+      ["4. Projections Output Summary"],
       ["Calculated Production Cost Floor ($)", metrics.baseCost.toFixed(2)],
       ["SUGGESTED RETAIL PRICE ($)", metrics.suggestedPrice.toFixed(2)],
       ["Net Cash Profit margin/Unit ($)", metrics.profitAmount.toFixed(2)],
@@ -210,33 +217,35 @@ export default function PricingDashboard({ currentUser, onLogout }) {
     }));
   };
 
-  // 3. Core Advanced Pricing Engine Logic
+  // ==========================================
+  // 3. CORE ANALYTICAL CALCULATION ENGINE
+  // ==========================================
   useEffect(() => {
-    // A. Apply Inflation Multiplier to Raw Material Component Costs
+    // A. Apply Compound Inflation Factor to Materials Base
     const inflationMultiplier = 1 + (macroFactors.annualInflationPercent / 100);
     const materialTotal = businessType === 'digital' ? 0 : (costs.materials * inflationMultiplier);
     
-    // B. Calculate Labor Component
+    // B. Calculate Raw Labor Factor
     const laborTotal = businessType === 'digital' ? 0 : (costs.hoursSpent * costs.hourlyRate);
     
-    // C. Distributed Allocated Corporate Overhead Volume Weighting
+    // C. Amortize Overhead Across Estimated Sales Volumetric Capacity
     const allocatedOverhead = costs.monthlyOverhead / (costs.estimatedMonthlySales || 1);
     
-    // Combine base elements into a core micro cost floor
+    // Base Variable Microeconomic Floor Sum
     let calculatedBaseCost = materialTotal + laborTotal + allocatedOverhead;
 
-    // D. Compute Geopolitical Volatility Risk Buffers
+    // D. Compute Geopolitical Supply Chain Risk Premiums
     let supplyChainMultiplier = 1.0;
-    if (macroFactors.supplyChainRisk === 'disrupted') supplyChainMultiplier = 1.15; // 15% freight/scarcity tax
-    if (macroFactors.supplyChainRisk === 'severe') supplyChainMultiplier = 1.30;    // 30% alternative sourcing premium
+    if (macroFactors.supplyChainRisk === 'disrupted') supplyChainMultiplier = 1.15; // 15% operations buffer
+    if (macroFactors.supplyChainRisk === 'severe') supplyChainMultiplier = 1.30;    // 30% alternative route buffer
     
     calculatedBaseCost = calculatedBaseCost * supplyChainMultiplier;
 
-    // E. Compute Trade War Tariff Tax Penalties
+    // E. Factor Regulatory Customs Import Tariff Surcharges
     const tariffMultiplier = 1 + (macroFactors.tradeWarTariffPercent / 100);
     calculatedBaseCost = calculatedBaseCost * tariffMultiplier;
 
-    // F. Final Margin Markup Processing 
+    // F. Margin Markup Elasticity Calculations
     let calculatedPrice = 0;
     const marginDecimal = targetMargin / 100;
 
@@ -257,6 +266,7 @@ export default function PricingDashboard({ currentUser, onLogout }) {
     const profit = calculatedPrice - calculatedBaseCost;
     const monthlyProjection = profit * costs.estimatedMonthlySales;
 
+    // Competitive Landscape Mapping Analysis
     let position = 'Competitive';
     const variance = ((calculatedPrice - competitorPrice) / competitorPrice) * 100;
     if (variance > 15) position = 'Premium / High-End';
@@ -274,19 +284,19 @@ export default function PricingDashboard({ currentUser, onLogout }) {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-6 font-sans">
-      {/* Header Bar */}
+      
+      {/* Upper Navigation and System Command Utility Strip */}
       <header className="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-800 pb-5 gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
             PriceEngine Pro
           </h1>
-          <p className="text-slate-400 mt-1 text-sm">Universal Pricing Strategy Command Center</p>
+          <p className="text-slate-400 mt-1 text-sm">Universal Risk-Isolated Pricing Matrix Core</p>
         </div>
         
-        {/* User Account Controls */}
         <div className="flex items-center gap-4 self-stretch md:self-auto justify-between md:justify-end">
           <div className="text-right hidden sm:block">
-            <span className="block text-xxs font-bold text-slate-500 uppercase tracking-wider">Authenticated As</span>
+            <span className="block text-xxs font-bold text-slate-500 uppercase tracking-wider">Secure Connection Established</span>
             <span className="text-xs text-emerald-400 font-medium">{currentUser?.get('username')}</span>
           </div>
           
@@ -315,15 +325,15 @@ export default function PricingDashboard({ currentUser, onLogout }) {
         </div>
       </header>
 
-      {/* Main Dashboard Layout */}
+      {/* Grid Control Console Component */}
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* LEFT COLUMN: Input Configuration Panels */}
+        {/* INPUT VARIABLES */}
         <section className="lg:col-span-5 bg-slate-800/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm space-y-6">
           <h2 className="text-xl font-bold text-slate-200 mb-4 border-b border-slate-800 pb-2">1. Variable Configuration</h2>
           
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Product / Project Name</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Product / Asset Identifier</label>
             <input 
               type="text" 
               value={productName}
@@ -368,7 +378,7 @@ export default function PricingDashboard({ currentUser, onLogout }) {
 
           {businessType === 'digital' && (
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Platform Checkout Fee (%)</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Gateway / Checkout processing Fee (%)</label>
               <input 
                 type="number" 
                 value={costs.platformFeePercent} 
@@ -380,7 +390,7 @@ export default function PricingDashboard({ currentUser, onLogout }) {
 
           <div className="grid grid-cols-2 gap-4 border-t border-slate-800/80 pt-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Monthly Overhead ($)</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Monthly Fixed Overhead ($)</label>
               <input 
                 type="number" 
                 value={costs.monthlyOverhead} 
@@ -389,7 +399,7 @@ export default function PricingDashboard({ currentUser, onLogout }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Est. Monthly Sales</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Est. Monthly Sales Volume</label>
               <input 
                 type="number" 
                 value={costs.estimatedMonthlySales} 
@@ -399,13 +409,13 @@ export default function PricingDashboard({ currentUser, onLogout }) {
             </div>
           </div>
 
-          {/* Macroeconomic Variable Inputs */}
+          {/* MACROENVIRONMENT LAYER */}
           <div className="border-t border-slate-800/80 pt-4 space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-amber-500">2. Macroeconomic Environmental Layer</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-amber-500">2. Macroeconomic Environmental Risk Matrix</h3>
             
             <div>
               <div className="flex justify-between text-xs font-semibold text-slate-400 mb-1">
-                <span>Annual Inflation Surge Rate</span>
+                <span>Annualized Market Inflation Index</span>
                 <span className="text-amber-400 font-mono font-bold">{macroFactors.annualInflationPercent}%</span>
               </div>
               <input 
@@ -420,20 +430,20 @@ export default function PricingDashboard({ currentUser, onLogout }) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1">Geopolitical Conflict / Logistics Premium</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Logistics Corridor Surcharging Severity</label>
               <select
                 value={macroFactors.supplyChainRisk}
                 onChange={(e) => setMacroFactors(prev => ({ ...prev, supplyChainRisk: e.target.value }))}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500"
               >
-                <option value="stable">Stable (Unimpeded Open Trade Lines)</option>
-                <option value="disrupted">Disrupted Conflict Zone (+15% Scarcity Buffer)</option>
-                <option value="severe">Severe Embargo / Blockade (+30% Route Re-engineering Surcharge)</option>
+                <option value="stable">Stable (Open Supply Trade Routing Lines)</option>
+                <option value="disrupted">Disrupted Geopolitical Node (+15% Protection Layer)</option>
+                <option value="severe">Severe Embargo / Blockade Threat (+30% Resource Realignment Premium)</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1">Customs Import Tariffs / Trade War Surtax (%)</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Customs Tariffs / Trade War Surtax Burden (%)</label>
               <input 
                 type="number" 
                 min="0"
@@ -449,7 +459,7 @@ export default function PricingDashboard({ currentUser, onLogout }) {
           <div className="border-t border-slate-800/80 pt-4 space-y-4">
             <div>
               <div className="flex justify-between text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                <span>Target Profit Margin</span>
+                <span>Target Net Profit Margin</span>
                 <span className="text-emerald-400 font-bold text-sm">{targetMargin}%</span>
               </div>
               <input 
@@ -463,7 +473,7 @@ export default function PricingDashboard({ currentUser, onLogout }) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Competitor Benchmark Price ($)</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Competitor Baseline Anchor Price ($)</label>
               <input 
                 type="number" 
                 value={competitorPrice} 
@@ -474,73 +484,69 @@ export default function PricingDashboard({ currentUser, onLogout }) {
           </div>
         </section>
 
-        {/* RIGHT COLUMN: Calculations & Metrics Panels */}
+        {/* ANALYTICS OUTPUT DISPLAYS */}
         <section className="lg:col-span-7 space-y-6">
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/60 rounded-3xl p-8 flex flex-col justify-between relative overflow-hidden shadow-2xl">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <span className="text-9xl font-black">$$</span>
-            </div>
-            
             <span className="text-xs uppercase font-bold tracking-widest text-slate-400 block mb-1">
-              Suggested Retail Price for: <span className="text-slate-200">{productName || 'Untitled'}</span>
+              Optimized Target Retail Price: <span className="text-slate-200">{productName || 'Untitled'}</span>
             </span>
             <div className="text-5xl md:text-6xl font-black text-emerald-400 my-4 tracking-tight">
               ${metrics.suggestedPrice.toFixed(2)}
             </div>
             
             <p className="text-xs text-slate-400 mt-2 border-t border-slate-800 pt-4">
-              {businessType === 'service' && "* Includes a standard 20% project safety net buffer to protect against unpaid scope creep."}
-              {businessType === 'digital' && `* Dynamically protects against your specified ${costs.platformFeePercent}% checkout processing fees.`}
-              {businessType === 'physical' && "* Calculates baseline Cost-Plus matching exact target corporate metrics alongside macro multipliers."}
+              {businessType === 'service' && "* Includes an advanced 20% security buffer to mitigate overhead and project scope creep liabilities dynamically."}
+              {businessType === 'digital' && `* Calculates processing tolerances to ensure checkout gateway loops do not compress net profitability.`}
+              {businessType === 'physical' && "* Computes compound microcost components against macro variable fluctuations."}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-slate-800/30 border border-slate-800 p-5 rounded-2xl">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Production Base Cost</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Adjusted Cost Basis</span>
               <div className="text-2xl font-bold mt-1 text-slate-200">${metrics.baseCost.toFixed(2)}</div>
-              <p className="text-xxs text-slate-500 mt-1">Total materials + labor + allocated overhead weight adjusted for risk.</p>
+              <p className="text-xxs text-slate-500 mt-1">Sum of production costs, overhead distribution, and macroeconomic risk buffers.</p>
             </div>
 
             <div className="bg-slate-800/30 border border-slate-800 p-5 rounded-2xl">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Net Profit / Sale</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Net Profit Yield / Unit</span>
               <div className="text-2xl font-bold mt-1 text-cyan-400">${metrics.profitAmount.toFixed(2)}</div>
-              <p className="text-xxs text-slate-500 mt-1">Pure cash retention value per customer transaction.</p>
+              <p className="text-xxs text-slate-500 mt-1">Retained cash liquidity per customer interaction.</p>
             </div>
 
             <div className="bg-slate-800/30 border border-slate-800 p-5 rounded-2xl">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Projected Monthly Profits</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Projected Runrate Profitability</span>
               <div className="text-2xl font-bold mt-1 text-purple-400">${metrics.monthlyProfitProjection.toFixed(2)}</div>
-              <p className="text-xxs text-slate-500 mt-1">Estimated monthly revenue minus operational costs.</p>
+              <p className="text-xxs text-slate-500 mt-1">Calculated monthly earnings projection matching the volume index parameters.</p>
             </div>
 
             <div className="bg-slate-800/30 border border-slate-800 p-5 rounded-2xl">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Market Strategy Positioning</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Market Positioning Index</span>
               <div className={`text-xl font-black mt-1 ${
                 metrics.marketPosition.includes('Premium') ? 'text-amber-400' : 
                 metrics.marketPosition.includes('Budget') ? 'text-cyan-400' : 'text-emerald-400'
               }`}>
                 {metrics.marketPosition}
               </div>
-              <p className="text-xxs text-slate-500 mt-1">Calculated evaluation matching competitor variables.</p>
+              <p className="text-xxs text-slate-500 mt-1">Competitive profile index relative to baseline anchor fields.</p>
             </div>
           </div>
 
-          {/* ACTIVE PORTFOLIO HISTORY WORKSPACE LAYER */}
+          {/* LIVE PORTFOLIO SUITE LEDGER */}
           <div className="bg-slate-800/20 border border-slate-800/80 rounded-2xl p-6 space-y-4">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200">Active Pricing Portfolios</h3>
-                <p className="text-xxs text-slate-500 mt-0.5">Live secure cloud records loaded from your private workspace</p>
+                <p className="text-xxs text-slate-500 mt-0.5">Isolated records securely synced from your database account</p>
               </div>
               <span className="bg-slate-800 text-emerald-400 font-mono text-xs px-2.5 py-1 rounded-md font-bold border border-slate-700/50">
-                {savedProducts.length} Profiles
+                {savedProducts.length} Saved Profiles
               </span>
             </div>
 
             {savedProducts.length === 0 ? (
               <div className="text-center py-6 border border-dashed border-slate-800 rounded-xl text-xs text-slate-500">
-                No active pricing snapshots found. Configure your matrix parameters left and click Save below to build your ledger.
+                No active records. Populate configuration variables and save to construct your portfolio array ledger.
               </div>
             ) : (
               <div className="overflow-hidden rounded-xl border border-slate-800/60 bg-slate-900/40 divide-y divide-slate-800/60 max-h-60 overflow-y-auto">
@@ -551,9 +557,9 @@ export default function PricingDashboard({ currentUser, onLogout }) {
                       <div className="flex gap-2 items-center text-xxs font-mono text-slate-500 mt-0.5">
                         <span className="uppercase text-emerald-500 font-bold tracking-wider">{prod.get('businessType')}</span>
                         <span>•</span>
-                        <span>Margin: {prod.get('targetMargin')}%</span>
+                        <span>Margin target: {prod.get('targetMargin')}%</span>
                         <span>•</span>
-                        <span>Inflation: {prod.get('inflationRateSnapshot')}%</span>
+                        <span>Inflation base: {prod.get('inflationRateSnapshot')}%</span>
                       </div>
                     </div>
                     
@@ -561,7 +567,7 @@ export default function PricingDashboard({ currentUser, onLogout }) {
                       onClick={() => handleDeleteProduct(prod.id)}
                       className="px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-xxs uppercase tracking-wider font-bold text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30 transition-all shrink-0"
                     >
-                      Purge
+                      Delete Profile
                     </button>
                   </div>
                 ))}
@@ -569,31 +575,19 @@ export default function PricingDashboard({ currentUser, onLogout }) {
             )}
           </div>
 
-          {targetMargin < 20 && (
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex gap-3 items-center">
-              <div className="text-amber-500 text-xl font-bold font-mono">⚠️</div>
-              <div>
-                <h4 className="text-sm font-bold text-amber-400">Sub-Optimal Margin Risk Detected</h4>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Operating below a 20% target profit margin exposes small business infrastructure to high risk if raw material prices experience inflation shifts.
-                </p>
-              </div>
-            </div>
-          )}
-
           <div className="flex justify-end gap-3 pt-2">
             <button 
               onClick={handleClearGrid}
               className="px-5 py-3 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl text-sm transition-colors border border-slate-700"
             >
-              Clear Grid
+              Clear Workspace
             </button>
 
             <button 
               onClick={handleExportCSV}
               className="px-5 py-3 bg-slate-900 hover:bg-slate-800 font-bold rounded-xl text-sm transition-colors border border-slate-700/80 text-slate-300 flex items-center justify-center gap-2"
             >
-              <span>📊</span> Export Summary
+              <span>📊</span> Export Sheet Data
             </button>
 
             <button 
