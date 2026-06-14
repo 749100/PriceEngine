@@ -25,6 +25,9 @@ export default function PricingDashboard({ currentUser, onLogout }) {
   const [targetMargin, setTargetMargin] = useState(35); // Percentage (0-99)
   const [competitorPrice, setCompetitorPrice] = useState(65.00);
 
+  // Portfolio Dashboard View State
+  const [savedProducts, setSavedProducts] = useState([]);
+
   // 2. Calculated Metrics State
   const [metrics, setMetrics] = useState({
     baseCost: 0,
@@ -34,7 +37,28 @@ export default function PricingDashboard({ currentUser, onLogout }) {
     marketPosition: 'Competitive'
   });
 
-  // Database Core Save Action (Includes Macro Conditions)
+  // Fetch portfolio tracking rows linked to current user session
+  const fetchUserPortfolio = async () => {
+    try {
+      const query = new Parse.Query("Product");
+      query.equalTo("createdBy", Parse.User.current());
+      query.descending("createdAt"); // Show newest snapshots first
+      
+      const results = await query.find();
+      setSavedProducts(results);
+    } catch (error) {
+      console.error("Failed to compile user portfolio database mapping:", error);
+    }
+  };
+
+  // Trigger portfolio fetch on dashboard initialization
+  useEffect(() => {
+    if (currentUser) {
+      fetchUserPortfolio();
+    }
+  }, [currentUser]);
+
+  // Database Core Save Action (Includes Macro Conditions + Portfolio Sync)
   const handleSaveProduct = async () => {
     try {
       const Product = new Parse.Object("Product");
@@ -68,10 +92,94 @@ export default function PricingDashboard({ currentUser, onLogout }) {
 
       await Product.save();
       alert('Macro-evaluated asset array successfully saved to Back4App cloud repository!');
+      
+      // Refresh user view automatically without page reloads
+      fetchUserPortfolio();
     } catch (error) {
       console.error('Error saving data to Back4App:', error);
       alert('Failed to save product details: ' + error.message);
     }
+  };
+
+  // Structural Database Row Purge
+  const handleDeleteProduct = async (productId) => {
+    if (!window.confirm("Are you sure you want to permanently delete this pricing profile from your cloud container?")) return;
+    
+    try {
+      const query = new Parse.Query("Product");
+      const objectToPurge = await query.get(productId);
+      await objectToPurge.destroy();
+      
+      // Update local ledger view state
+      fetchUserPortfolio();
+    } catch (error) {
+      console.error("Deletion lifecycle failure:", error);
+      alert("Failed to delete product layout entry: " + error.message);
+    }
+  };
+
+  // Clear inputs helper
+  const handleClearGrid = () => {
+    setProductName('');
+    setCosts({
+      materials: 0,
+      hoursSpent: 0,
+      hourlyRate: 0,
+      monthlyOverhead: 0,
+      estimatedMonthlySales: 1,
+      platformFeePercent: 0
+    });
+    setMacroFactors({
+      annualInflationPercent: 0,
+      supplyChainRisk: 'stable',
+      tradeWarTariffPercent: 0
+    });
+    setTargetMargin(20);
+    setCompetitorPrice(0);
+  };
+
+  const handleExportCSV = () => {
+    const csvRows = [
+      ["Macro-Aware PriceEngine Pro - Executive Summary Report"],
+      ["Generated On", new Date().toLocaleDateString()],
+      [],
+      ["1. Metadata Configuration"],
+      ["Product Name", productName || "Untitled Product"],
+      ["Business Asset Class", businessType.toUpperCase()],
+      [],
+      ["2. Microeconomic Cost Inputs"],
+      ["Material Component Cost ($)", businessType === 'digital' ? 0 : costs.materials],
+      ["Labor Allocated (Hours)", businessType === 'digital' ? 0 : costs.hoursSpent],
+      ["Hourly Surcharging Wage ($/hr)", businessType === 'digital' ? 0 : costs.hourlyRate],
+      ["Corporate Monthly Overhead ($)", costs.monthlyOverhead],
+      ["Target Profit Margin (%)", `${targetMargin}%`],
+      ["Competitor Price Anchor ($)", competitorPrice],
+      [],
+      ["3. Macroeconomic Volatility Variables"],
+      ["Annual Inflation Surge Rate (%)", `${macroFactors.annualInflationPercent}%`],
+      ["Geopolitical Risk Matrix Tier", macroFactors.supplyChainRisk.toUpperCase()],
+      ["Customs Import Tariff Surtax (%)", `${macroFactors.tradeWarTariffPercent}%`],
+      [],
+      ["4. Core Output Projections"],
+      ["Calculated Production Cost Floor ($)", metrics.baseCost.toFixed(2)],
+      ["SUGGESTED RETAIL PRICE ($)", metrics.suggestedPrice.toFixed(2)],
+      ["Net Cash Profit margin/Unit ($)", metrics.profitAmount.toFixed(2)],
+      ["Projected Monthly Retention ($)", metrics.monthlyProfitProjection.toFixed(2)],
+      ["Strategic Competitive Position", metrics.marketPosition]
+    ];
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + csvRows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")).join("\n");
+
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", encodeURI(csvContent));
+    
+    const sanitizedFilename = (productName || "pricing_matrix").toLowerCase().replace(/[^a-z0-9]/g, "_");
+    downloadAnchor.setAttribute("download", `price_engine_report_${sanitizedFilename}.csv`);
+    
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    document.body.removeChild(downloadAnchor);
   };
 
   const handleCostChange = (key, value) => {
@@ -369,7 +477,7 @@ export default function PricingDashboard({ currentUser, onLogout }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-slate-800/30 border border-slate-800 p-5 rounded-2xl">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Production Base Cost</span>
-              <div className="text-2xl font-bold mt-1 text-slate-200">${metrics.baseCost.toFixed(2)}</div>
+<div className="text-2xl font-bold mt-1 text-slate-200">${metrics.baseCost.toFixed(2)}</div>
               <p className="text-xxs text-slate-500 mt-1">Total materials + labor + allocated overhead weight adjusted for risk.</p>
             </div>
 
@@ -396,6 +504,50 @@ export default function PricingDashboard({ currentUser, onLogout }) {
               <p className="text-xxs text-slate-500 mt-1">Calculated evaluation matching competitor variables.</p>
             </div>
           </div>
+
+          {/* ACTIVE PORTFOLIO HISTORY WORKSPACE LAYER */}
+          <div className="bg-slate-800/20 border border-slate-800/80 rounded-2xl p-6 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200">Active Pricing Portfolios</h3>
+                <p className="text-xxs text-slate-500 mt-0.5">Live secure cloud records loaded from your private workspace</p>
+              </div>
+              <span className="bg-slate-800 text-emerald-400 font-mono text-xs px-2.5 py-1 rounded-md font-bold border border-slate-700/50">
+                {savedProducts.length} Profiles
+              </span>
+            </div>
+
+            {savedProducts.length === 0 ? (
+              <div className="text-center py-6 border border-dashed border-slate-800 rounded-xl text-xs text-slate-500">
+                No active pricing snapshots found. Configure your matrix parameters left and click Save below to build your ledger.
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-slate-800/60 bg-slate-900/40 divide-y divide-slate-800/60 max-h-60 overflow-y-auto">
+                {savedProducts.map((prod) => (
+                  <div key={prod.id} className="flex justify-between items-center p-3.5 hover:bg-slate-800/30 transition-colors gap-4">
+                    <div className="truncate">
+                      <span className="font-semibold text-slate-200 text-sm block truncate">{prod.get('name')}</span>
+                      <div className="flex gap-2 items-center text-xxs font-mono text-slate-500 mt-0.5">
+                        <span className="uppercase text-emerald-500 font-bold tracking-wider">{prod.get('businessType')}</span>
+                        <span>•</span>
+                        <span>Margin: {prod.get('targetMargin')}%</span>
+                        <span>•</span>
+                        <span>Inflation: {prod.get('inflationRateSnapshot')}%</span>
+                      </div>
+                    </div>
+                    
+                    <button 
+                      onClick={() => handleDeleteProduct(prod.id)}
+                      className="px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-xxs uppercase tracking-wider font-bold text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30 transition-all shrink-0"
+                    >
+                      Purge
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {targetMargin < 20 && (
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex gap-3 items-center">
               <div className="text-amber-500 text-xl font-bold font-mono">⚠️</div>
@@ -409,9 +561,21 @@ export default function PricingDashboard({ currentUser, onLogout }) {
           )}
 
           <div className="flex justify-end gap-3 pt-2">
-            <button className="px-5 py-3 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl text-sm transition-colors border border-slate-700">
+            <button 
+              onClick={handleClearGrid}
+              className="px-5 py-3 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl text-sm transition-colors border border-slate-700"
+            >
               Clear Grid
             </button>
+
+            {/* HERE IS THE EXPORT BUTTON - ADDED SAFELY IN THE MIDDLE */}
+            <button 
+              onClick={handleExportCSV}
+              className="px-5 py-3 bg-slate-900 hover:bg-slate-800 font-bold rounded-xl text-sm transition-colors border border-slate-700/80 text-slate-300 flex items-center justify-center gap-2"
+            >
+              <span>📊</span> Export Summary
+            </button>
+
             <button 
               onClick={handleSaveProduct}
               className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-extrabold rounded-xl text-sm hover:opacity-90 shadow-lg shadow-emerald-500/10 transition-opacity"
