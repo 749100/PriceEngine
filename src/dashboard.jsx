@@ -40,8 +40,13 @@ export default function PricingDashboard({ currentUser, onLogout }) {
   // Fetch portfolio tracking rows linked to current user session
   const fetchUserPortfolio = async () => {
     try {
+      const activeUser = Parse.User.current();
+      if (!activeUser) return;
+
       const query = new Parse.Query("Product");
-      query.equalTo("createdBy", Parse.User.current());
+      
+      // Relational Multi-Tenancy Filter
+      query.equalTo("createdBy", activeUser);
       query.descending("createdAt"); // Show newest snapshots first
       
       const results = await query.find();
@@ -61,6 +66,13 @@ export default function PricingDashboard({ currentUser, onLogout }) {
   // Database Core Save Action (Includes Macro Conditions + Portfolio Sync)
   const handleSaveProduct = async () => {
     try {
+      // Authenticated Guard Layer
+      const activeUser = Parse.User.current();
+      if (!activeUser) {
+        alert('Authentication session missing. Please log in to manage pricing assets.');
+        return;
+      }
+
       const Product = new Parse.Object("Product");
 
       // Core Properties
@@ -76,7 +88,12 @@ export default function PricingDashboard({ currentUser, onLogout }) {
       Product.set("appliedTariffPercent", macroFactors.tradeWarTariffPercent);
       
       // Relational ownership pointer
-      Product.set("createdBy", Parse.User.current());
+      Product.set("createdBy", activeUser);
+
+      // 🔐 SERVER-SIDE ENFORCED ACL MULTI-TENANCY LOCK
+      // Restricts database-level read/write mutations exclusively to this logged-in user
+      const productAcl = new Parse.ACL(activeUser);
+      Product.setACL(productAcl);
 
       if (businessType === 'digital') {
         Product.set("materials", 0);
@@ -91,7 +108,7 @@ export default function PricingDashboard({ currentUser, onLogout }) {
       }
 
       await Product.save();
-      alert('Macro-evaluated asset array successfully saved to Back4App cloud repository!');
+      alert('Macro-evaluated asset array successfully saved to secure private cloud container!');
       
       // Refresh user view automatically without page reloads
       fetchUserPortfolio();
@@ -378,7 +395,7 @@ export default function PricingDashboard({ currentUser, onLogout }) {
             </div>
           </div>
 
-          {/* NEW MODULE: Macroeconomic Threat Variables Configuration Controls */}
+          {/* Macroeconomic Variable Inputs */}
           <div className="border-t border-slate-800/80 pt-4 space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-widest text-amber-500">2. Macroeconomic Environmental Layer</h3>
             
@@ -477,7 +494,7 @@ export default function PricingDashboard({ currentUser, onLogout }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-slate-800/30 border border-slate-800 p-5 rounded-2xl">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Production Base Cost</span>
-<div className="text-2xl font-bold mt-1 text-slate-200">${metrics.baseCost.toFixed(2)}</div>
+              <div className="text-2xl font-bold mt-1 text-slate-200">${metrics.baseCost.toFixed(2)}</div>
               <p className="text-xxs text-slate-500 mt-1">Total materials + labor + allocated overhead weight adjusted for risk.</p>
             </div>
 
@@ -568,7 +585,6 @@ export default function PricingDashboard({ currentUser, onLogout }) {
               Clear Grid
             </button>
 
-            {/* HERE IS THE EXPORT BUTTON - ADDED SAFELY IN THE MIDDLE */}
             <button 
               onClick={handleExportCSV}
               className="px-5 py-3 bg-slate-900 hover:bg-slate-800 font-bold rounded-xl text-sm transition-colors border border-slate-700/80 text-slate-300 flex items-center justify-center gap-2"
