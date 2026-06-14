@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Parse from 'parse/dist/parse.min.js';
 
-export default function PricingDashboard() {
-  // 1. Unified Application State
+export default function PricingDashboard({ currentUser, onLogout }) {
+  // 1. Expanded Unified Application State
   const [businessType, setBusinessType] = useState('physical'); // physical, service, digital
   const [productName, setProductName] = useState('My Awesome Product');
   
@@ -13,6 +13,13 @@ export default function PricingDashboard() {
     monthlyOverhead: 500,
     estimatedMonthlySales: 50,
     platformFeePercent: 5 // Default for digital products (Stripe/Gumroad)
+  });
+
+  // Macroeconomic Risk Layer State
+  const [macroFactors, setMacroFactors] = useState({
+    annualInflationPercent: 3.5,     // Compounding baseline cost increase
+    supplyChainRisk: 'stable',       // stable, disrupted, severe
+    tradeWarTariffPercent: 0         // Import/Export regulatory tax protection
   });
   
   const [targetMargin, setTargetMargin] = useState(35); // Percentage (0-99)
@@ -27,17 +34,25 @@ export default function PricingDashboard() {
     marketPosition: 'Competitive'
   });
 
-  // Database Core Save Action
+  // Database Core Save Action (Includes Macro Conditions)
   const handleSaveProduct = async () => {
     try {
       const Product = new Parse.Object("Product");
 
-      // Set clean fields depending on business type architecture
+      // Core Properties
       Product.set("name", productName);
       Product.set("businessType", businessType);
       Product.set("overhead", costs.monthlyOverhead);
       Product.set("monthlySales", costs.estimatedMonthlySales);
       Product.set("targetMargin", targetMargin);
+      
+      // Macro Snapshot Properties
+      Product.set("inflationRateSnapshot", macroFactors.annualInflationPercent);
+      Product.set("supplyChainRiskTier", macroFactors.supplyChainRisk);
+      Product.set("appliedTariffPercent", macroFactors.tradeWarTariffPercent);
+      
+      // Relational ownership pointer
+      Product.set("createdBy", Parse.User.current());
 
       if (businessType === 'digital') {
         Product.set("materials", 0);
@@ -52,14 +67,13 @@ export default function PricingDashboard() {
       }
 
       await Product.save();
-      alert('Product details successfully saved to Back4App cloud database!');
+      alert('Macro-evaluated asset array successfully saved to Back4App cloud repository!');
     } catch (error) {
       console.error('Error saving data to Back4App:', error);
       alert('Failed to save product details: ' + error.message);
     }
   };
 
-  // Handle nested cost input changes safely
   const handleCostChange = (key, value) => {
     setCosts(prev => ({
       ...prev,
@@ -67,16 +81,33 @@ export default function PricingDashboard() {
     }));
   };
 
-  // 3. Core Pricing Engine Logic
+  // 3. Core Advanced Pricing Engine Logic
   useEffect(() => {
-    // Calculate Base Cost
-    const materialTotal = businessType === 'digital' ? 0 : costs.materials;
+    // A. Apply Inflation Multiplier to Raw Material Component Costs
+    const inflationMultiplier = 1 + (macroFactors.annualInflationPercent / 100);
+    const materialTotal = businessType === 'digital' ? 0 : (costs.materials * inflationMultiplier);
+    
+    // B. Calculate Labor Component
     const laborTotal = businessType === 'digital' ? 0 : (costs.hoursSpent * costs.hourlyRate);
+    
+    // C. Distributed Allocated Corporate Overhead Volume Weighting
     const allocatedOverhead = costs.monthlyOverhead / (costs.estimatedMonthlySales || 1);
     
-    const calculatedBaseCost = materialTotal + laborTotal + allocatedOverhead;
+    // Combine base elements into a core micro cost floor
+    let calculatedBaseCost = materialTotal + laborTotal + allocatedOverhead;
 
-    // Calculate Suggested Price based on Business Type
+    // D. Compute Geopolitical Volatility Risk Buffers
+    let supplyChainMultiplier = 1.0;
+    if (macroFactors.supplyChainRisk === 'disrupted') supplyChainMultiplier = 1.15; // 15% freight/scarcity tax
+    if (macroFactors.supplyChainRisk === 'severe') supplyChainMultiplier = 1.30;    // 30% alternative sourcing premium
+    
+    calculatedBaseCost = calculatedBaseCost * supplyChainMultiplier;
+
+    // E. Compute Trade War Tariff Tax Penalties
+    const tariffMultiplier = 1 + (macroFactors.tradeWarTariffPercent / 100);
+    calculatedBaseCost = calculatedBaseCost * tariffMultiplier;
+
+    // F. Final Margin Markup Processing 
     let calculatedPrice = 0;
     const marginDecimal = targetMargin / 100;
 
@@ -86,7 +117,7 @@ export default function PricingDashboard() {
       const feeDecimal = costs.platformFeePercent / 100;
       calculatedPrice = calculatedBaseCost / (1 - (marginDecimal + feeDecimal));
     } else if (businessType === 'service') {
-      const baseWithBuffer = calculatedBaseCost * 1.20;
+      const baseWithBuffer = calculatedBaseCost * 1.20; // 20% protection against unpaid scope creep
       calculatedPrice = baseWithBuffer / (1 - marginDecimal);
     }
 
@@ -110,7 +141,7 @@ export default function PricingDashboard() {
       marketPosition: position
     });
 
-  }, [businessType, costs, targetMargin, competitorPrice]);
+  }, [businessType, costs, targetMargin, competitorPrice, macroFactors]);
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-6 font-sans">
@@ -122,27 +153,43 @@ export default function PricingDashboard() {
           </h1>
           <p className="text-slate-400 mt-1 text-sm">Universal Pricing Strategy Command Center</p>
         </div>
-        <div className="flex gap-2 bg-slate-800 p-1 rounded-xl border border-slate-700">
-          {['physical', 'service', 'digital'].map((type) => (
-            <button
-              key={type}
-              onClick={() => setBusinessType(type)}
-              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200 ${
-                businessType === type 
-                  ? 'bg-emerald-500 text-slate-950 shadow-md' 
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
-              }`}
+        
+        {/* User Account Controls */}
+        <div className="flex items-center gap-4 self-stretch md:self-auto justify-between md:justify-end">
+          <div className="text-right hidden sm:block">
+            <span className="block text-xxs font-bold text-slate-500 uppercase tracking-wider">Authenticated As</span>
+            <span className="text-xs text-emerald-400 font-medium">{currentUser?.get('username')}</span>
+          </div>
+          
+          <div className="flex gap-2 bg-slate-800 p-1 rounded-xl border border-slate-700 items-center">
+            {['physical', 'service', 'digital'].map((type) => (
+              <button
+                key={type}
+                onClick={() => setBusinessType(type)}
+                className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200 ${
+                  businessType === type 
+                    ? 'bg-emerald-500 text-slate-950 shadow-md' 
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                }`}
+              >
+                {type}
+              </button>
+            ))}
+            <div className="w-px h-6 bg-slate-700 mx-1"></div>
+            <button 
+              onClick={onLogout}
+              className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
             >
-              {type} Product
+              Log Out
             </button>
-          ))}
+          </div>
         </div>
       </header>
 
       {/* Main Dashboard Layout */}
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* LEFT COLUMN: Input Configuration */}
+        {/* LEFT COLUMN: Input Configuration Panels */}
         <section className="lg:col-span-5 bg-slate-800/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm space-y-6">
           <h2 className="text-xl font-bold text-slate-200 mb-4 border-b border-slate-800 pb-2">1. Variable Configuration</h2>
           
@@ -223,6 +270,53 @@ export default function PricingDashboard() {
             </div>
           </div>
 
+          {/* NEW MODULE: Macroeconomic Threat Variables Configuration Controls */}
+          <div className="border-t border-slate-800/80 pt-4 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-amber-500">2. Macroeconomic Environmental Layer</h3>
+            
+            <div>
+              <div className="flex justify-between text-xs font-semibold text-slate-400 mb-1">
+                <span>Annual Inflation Surge Rate</span>
+                <span className="text-amber-400 font-mono font-bold">{macroFactors.annualInflationPercent}%</span>
+              </div>
+              <input 
+                type="range" 
+                min="0" 
+                max="25" 
+                step="0.5"
+                value={macroFactors.annualInflationPercent} 
+                onChange={(e) => setMacroFactors(prev => ({ ...prev, annualInflationPercent: parseFloat(e.target.value) }))}
+                className="w-full h-1.5 bg-slate-900 rounded-lg appearance-none cursor-pointer accent-amber-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Geopolitical Conflict / Logistics Premium</label>
+              <select
+                value={macroFactors.supplyChainRisk}
+                onChange={(e) => setMacroFactors(prev => ({ ...prev, supplyChainRisk: e.target.value }))}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500"
+              >
+                <option value="stable">Stable (Unimpeded Open Trade Lines)</option>
+                <option value="disrupted">Disrupted Conflict Zone (+15% Scarcity Buffer)</option>
+                <option value="severe">Severe Embargo / Blockade (+30% Route Re-engineering Surcharge)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Customs Import Tariffs / Trade War Surtax (%)</label>
+              <input 
+                type="number" 
+                min="0"
+                max="100"
+                value={macroFactors.tradeWarTariffPercent} 
+                onChange={(e) => setMacroFactors(prev => ({ ...prev, tradeWarTariffPercent: parseFloat(e.target.value) || 0 }))}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-100 text-sm focus:outline-none focus:border-amber-500"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
           <div className="border-t border-slate-800/80 pt-4 space-y-4">
             <div>
               <div className="flex justify-between text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
@@ -251,7 +345,7 @@ export default function PricingDashboard() {
           </div>
         </section>
 
-        {/* RIGHT COLUMN: Interactive Calculations & Metrics */}
+        {/* RIGHT COLUMN: Calculations & Metrics Panels */}
         <section className="lg:col-span-7 space-y-6">
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/60 rounded-3xl p-8 flex flex-col justify-between relative overflow-hidden shadow-2xl">
             <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -268,7 +362,7 @@ export default function PricingDashboard() {
             <p className="text-xs text-slate-400 mt-2 border-t border-slate-800 pt-4">
               {businessType === 'service' && "* Includes a standard 20% project safety net buffer to protect against unpaid scope creep."}
               {businessType === 'digital' && `* Dynamically protects against your specified ${costs.platformFeePercent}% checkout processing fees.`}
-              {businessType === 'physical' && "* Calculates baseline Cost-Plus matching exact target corporate metrics."}
+              {businessType === 'physical' && "* Calculates baseline Cost-Plus matching exact target corporate metrics alongside macro multipliers."}
             </p>
           </div>
 
@@ -276,7 +370,7 @@ export default function PricingDashboard() {
             <div className="bg-slate-800/30 border border-slate-800 p-5 rounded-2xl">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Production Base Cost</span>
               <div className="text-2xl font-bold mt-1 text-slate-200">${metrics.baseCost.toFixed(2)}</div>
-              <p className="text-xxs text-slate-500 mt-1">Total materials + labor + allocated overhead weight.</p>
+              <p className="text-xxs text-slate-500 mt-1">Total materials + labor + allocated overhead weight adjusted for risk.</p>
             </div>
 
             <div className="bg-slate-800/30 border border-slate-800 p-5 rounded-2xl">
@@ -302,7 +396,6 @@ export default function PricingDashboard() {
               <p className="text-xxs text-slate-500 mt-1">Calculated evaluation matching competitor variables.</p>
             </div>
           </div>
-
           {targetMargin < 20 && (
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex gap-3 items-center">
               <div className="text-amber-500 text-xl font-bold font-mono">⚠️</div>
